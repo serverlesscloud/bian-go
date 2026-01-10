@@ -1,0 +1,108 @@
+# GraphQL schema for BIAN-Go banking API
+
+# Enums
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  INVESTMENT
+}
+
+enum AccountStatus {
+  OPEN
+  CLOSED
+  SUSPENDED
+}
+
+enum TransactionType {
+  DEBIT
+  CREDIT
+  TRANSFER
+  PAYMENT
+  FEE
+}
+
+enum ConsentStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  PENDING
+}
+
+enum BalanceType {
+  CURRENT
+  AVAILABLE
+  PENDING
+}
+
+# Object types
+type Account {
+  id: ID!
+  accountNumber: String!
+  accountType: AccountType!
+  productName: String!
+  nickname: String
+  status: AccountStatus!
+  openDate: String!
+  closeDate: String
+  currency: String!
+}
+
+type Money {
+  amount: String!
+  currency: String!
+}
+
+type Balance {
+  balanceType: BalanceType!
+  amount: Money!
+  timestamp: String!
+}
+
+type Transaction {
+  id: ID!
+  reference: String
+  transactionType: TransactionType!
+  amount: Money!
+  description: String!
+  merchantName: String
+  postingDate: String!
+  valueDate: String!
+  runningBalance: Money
+  accountId: String!
+}
+
+type Consent {
+  id: ID!
+  status: ConsentStatus!
+  scopes: [String!]!
+  grantDate: String!
+  expiryDate: String!
+  revocationDate: String
+}
+
+# Input types
+input TransactionHistoryInput {
+  fromDate: String
+  toDate: String
+  limit: Int
+  offset: Int
+}
+
+# Query type
+type Query {
+  # Account queries
+  account(id: ID!): Account
+  
+  # Balance queries
+  balance(accountId: ID!): Balance
+  balances(accountId: ID!): [Balance!]!
+  
+  # Transaction queries
+  transaction(id: ID!): Transaction
+  transactions(accountId: ID!, input: TransactionHistoryInput): [Transaction!]!
+  
+  # Consent queries
+  consent(id: ID!): Consent
+  consentStatus(id: ID!): ConsentStatus
+}

@@ -1,55 +1,39 @@
 # Git
 .git
 .gitignore
-.gitattributes
-
-# CI/CD
-.github
-.gitlab-ci.yml
-.travis.yml
 
 # Documentation
 *.md
-!README.md
 docs/
 
-# Editor/IDE
-.vscode
-.idea
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
-*~
-.DS_Store
 
-# OpenSpec (not needed in production image)
-openspec/
+# OS
+.DS_Store
+Thumbs.db
 
 # Build artifacts
-bin/
-dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
 coverage.out
-coverage.html
-*.coverprofile
 
-# Test artifacts
-*.test
-
-# Dependencies (will be downloaded in Docker)
-vendor/
-
-# Environment files
+# Development
 .env
-.env.*
+.env.local
 
-# Temporary files
-*.tmp
-*.bak
-
-# AI assistant directories
-.claude/
+# OpenSpec
+openspec/
 .amazonq/
+.claude/
 
-# Docker
-docker-compose.yml
-Dockerfile
-.dockerignore
+# Makefile
+Makefile

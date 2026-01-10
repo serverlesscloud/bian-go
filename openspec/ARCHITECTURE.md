@@ -1,16 +1,63 @@
 # Architecture Decisions
 This document outlines the architectural decisions and design patterns employed in the OpenSpec BIAN Go implementation. It describes the three-layer architecture, key components, and rationale behind technology choices.
 
-#### 1 Domain Layer 
+## System Architecture
+
+### Three-Layer Design
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    API Layer                                │
+│  ┌─────────────────────┐  ┌─────────────────────────────┐   │
+│  │   REST API          │  │   GraphQL API               │   │
+│  │   /accounts/*       │  │   /graphql                  │   │
+│  │   /transactions/*   │  │   /playground               │   │
+│  │   /consents/*       │  │                             │   │
+│  └─────────────────────┘  └─────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                 Domain Layer (BIAN Interfaces)             │
+│  AccountService | TransactionService | BalanceService      │
+│  ConsentService                                             │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                 Provider Layer                              │
+│  Mock Provider (in-memory with realistic sample data)      │
+│  Future: CDR, Plaid, Open Banking providers               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Principle**: Business logic lives in domain layer, transport is swappable.
+
+### Dual API Architecture
+
+Both REST and GraphQL APIs call domain interfaces directly (parallel implementations):
+- **Zero coupling** between REST and GraphQL
+- **No performance overhead** (both call domain directly)
+- **Independent evolution** of each API
+- **Provider implementations** swappable at runtime for both APIs
+
+## 1. Domain Layer 
+
+**Location:** `domains/`
+
 Defines BIAN service interfaces following the [BIAN Service Landscape](https://bian.org/servicelandscape/) standard. Aligning to https://github.com/bian-official/public artefacts 
 
-**Sample intefaces**
-- `AccountService` - Account retrieval, balance queries, account history
-- `TransactionService` - Transaction listing, payment initiation, status tracking
-- `ConsentService` - OAuth consent creation, revocation, refresh
-- `CustomerService` - Customer information, account associations
+**Implemented Interfaces (BIAN v13.0.0 subset):**
+- `AccountService` - Current Account Fulfillment service domain (read-only)
+- `TransactionService` - Payment Execution service domain (read-only)
+- `BalanceService` - Account Balance Management (read-only)
+- `ConsentService` - Customer Consent Management (read-only)
 
-#### 2 Model layer**
+**Future Interfaces:**
+- `CustomerService` - Customer information, account associations
+- Write operations (payment initiation, consent creation)
+
+## 2. Model Layer
+
+**Location:** `models/`
 
 BIAN-aligned data structures representing banking entities.
 
@@ -21,41 +68,51 @@ BIAN-aligned data structures representing banking entities.
 - `Money` - Decimal amount with currency (never float64)
 - `Consent` - OAuth consent with scope, expiry, status
 
-### 4. Provider Layer (Implementations)
+**Money Model Design Decision:**
+- Uses `github.com/shopspring/decimal` for precise financial calculations
+- JSON serialization to string format prevents JavaScript precision loss
+- ISO 4217 currency codes (AUD, USD, GBP, EUR, CAD)
+- Arithmetic operations: Add, Subtract, Multiply, Divide, Compare
 
-**Location:** `providers/`
+## 3. REST API Layer
 
-Region-specific implementations of domain interfaces.
+**Location:** `rest/`
 
-**Providers:**
-- `mock/` - In-memory provider with realistic test data (always available)
-- `cdr/` - Australian Consumer Data Right implementation
-- `plaid/` - US/Canada Plaid integration
-- `obuk/` - UK Open Banking (planned)
-- `psd2/` - EU PSD2 (planned)
+RESTful HTTP API using Go 1.22+ `http.ServeMux` with zero external dependencies.
 
-**Design Pattern:**
-- Each provider implements all domain interfaces
-- Normalization functions convert provider responses to canonical models
-- OAuth token management abstracted
-- Rate limiting and caching handled internally
-- Configuration via struct (not global state)
+**Endpoints:**
+- `GET /accounts/{id}` → RetrieveCurrentAccount
+- `GET /accounts/{id}/balance` → RetrieveCurrentAccountBalance
+- `GET /accounts/{id}/transactions` → RetrievePaymentTransactionHistory
+- `GET /transactions/{id}` → RetrievePaymentTransaction
+- `GET /consents/{id}` → RetrieveConsent
+- `GET /consents/{id}/status` → RetrieveConsentStatus
+- `GET /health` → Health check
 
+**Middleware Stack:**
+- Request logging (request ID, timing)
+- Error recovery (panic handling)
+- CORS handling
+- Error response formatting
 
-## GraphQL API Layer
+## 4. GraphQL API Layer
 
 **Location:** `graphql/`
 
-Modern API exposing BIAN domains via GraphQL with real-time capabilities.
+Modern API exposing BIAN domains via GraphQL with type-safe schema.
 
 ### Schema Structure
 
 **File:** `graphql/schema.graphql`
 
-Three operation types:
-1. **Query** - Read operations (accounts, transactions, balance)
-2. **Mutation** - Write operations (payment initiation, consent management)
-3. **Subscription** - Real-time updates (balance changes, new transactions)
+**Query Operations:**
+- `account(id)` - Account details
+- `balance(accountId)` - Current balance
+- `balances(accountId)` - All balance types
+- `transaction(id)` - Transaction details
+- `transactions(accountId, input)` - Transaction history with filtering
+- `consent(id)` - Consent information
+- `consentStatus(id)` - Consent status only
 
 **Code Generation:**
 - Uses [gqlgen](https://gqlgen.com/) for type-safe resolver generation
@@ -68,14 +125,71 @@ Three operation types:
 **File:** `graphql/resolver.go`
 
 Root resolver wraps domain interfaces:
-```
+```go
 Resolver {
     accountService
     transactionService
+    balanceService
     consentService
-    customerService
-    pubsub (for subscriptions)
 }
 ```
 
 Resolvers delegate to domain interfaces without business logic. All business rules live in domain/provider layers.
+
+## 5. Provider Layer (Implementations)
+
+**Location:** `providers/`
+
+Region-specific implementations of domain interfaces.
+
+**Current Providers:**
+- `mock/` - In-memory provider with realistic test data (always available)
+
+**Planned Providers:**
+- `cdr/` - Australian Consumer Data Right implementation
+- `plaid/` - US/Canada Plaid integration
+- `obuk/` - UK Open Banking
+- `psd2/` - EU PSD2
+
+**Design Pattern:**
+- Each provider implements all domain interfaces
+- Normalization functions convert provider responses to canonical models
+- OAuth token management abstracted
+- Rate limiting and caching handled internally
+- Configuration via struct (not global state)
+
+### Mock Provider
+
+**Sample Data:**
+- 3 accounts (checking, savings, credit card)
+- 11 transactions with realistic merchants
+- 3 consents (active, expired, revoked)
+- Multi-currency support (AUD, USD)
+
+## 6. Unified Server
+
+**Location:** `server/`
+
+Combines REST and GraphQL APIs on single HTTP server:
+- **Port**: Configurable via `PORT` environment variable (default: 8080)
+- **Graceful shutdown**: 30-second timeout
+- **Health checks**: `/health` endpoint
+- **Development**: GraphQL Playground at `/playground`
+
+## Technology Decisions
+
+### Go 1.22+ Standard Library
+- **http.ServeMux**: Enhanced with path variables, zero dependencies
+- **context.Context**: Cancellation and timeout handling
+- **encoding/json**: Standard JSON serialization
+
+### External Dependencies (Minimal)
+- **shopspring/decimal**: Precise financial arithmetic
+- **99designs/gqlgen**: GraphQL server and code generation
+- **google/uuid**: Request ID generation
+
+### Deployment
+- **Docker**: Multi-stage build with Alpine Linux
+- **Kubernetes**: Stateless, horizontally scalable
+- **Serverless**: Compatible with AWS Lambda, Google Cloud Run
+- **Health checks**: Built-in `/health` endpoint

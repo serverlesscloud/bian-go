@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openspec list:*)",
+      "WebSearch",
+      "Bash(openspec validate:*)",
+      "Bash(openspec show:*)",
+      "Bash(git add:*)",
+      "Bash(make help:*)"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+# GraphQL code generation configuration
+schema:
+  - graphql/schema.graphql
+
+exec:
+  filename: graphql/generated/generated.go
+  package: generated
+
+model:
+  filename: graphql/generated/models_gen.go
+  package: generated
+
+resolver:
+  layout: follow-schema
+  dir: graphql
+  package: graphql
+  filename_template: "{name}.resolvers.go"
+
+# Skip generating models that we define manually
+skip_mod_tidy: true
