@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Primary Go service - used for build, test, and development tasks
+  go:
+    image: golang:1.22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - go-modules:/go/pkg/mod  # Cache Go modules
+      - go-build-cache:/root/.cache/go-build  # Cache build artifacts
+    environment:
+      - CGO_ENABLED=0
+      - GOOS=linux
+      - GOARCH=amd64
+    networks:
+      - bian-network
+
+  # Application service - runs the example server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - GRAPHQL_PLAYGROUND=true
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["./bin/bian-go"]
+    networks:
+      - bian-network
+    depends_on:
+      - go
+
+  # Development service with hot reload (using air)
+  dev:
+    image: golang:1.22-alpine
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - go-modules:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - PORT=8080
+      - GRAPHQL_PLAYGROUND=true
+      - CGO_ENABLED=0
+    command: |
+      sh -c "
+        apk add --no-cache git &&
+        go install github.com/cosmtrek/air@latest &&
+        air
+      "
+    networks:
+      - bian-network
+
+  # Linter service
+  golangci-lint:
+    image: golangci/golangci-lint:v1.55-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - golangci-cache:/root/.cache
+    networks:
+      - bian-network
+
+  # OpenSpec CLI (if you have a Docker image for it)
+  # Uncomment and adjust if you have openspec as a Docker image
+  # openspec:
+  #   image: openspec/cli:latest
+  #   working_dir: /app
+  #   volumes:
+  #     - .:/app
+  #   networks:
+  #     - bian-network
+
+volumes:
+  go-modules:
+    driver: local
+  go-build-cache:
+    driver: local
+  golangci-cache:
+    driver: local
+
+networks:
+  bian-network:
+    driver: bridge
