@@ -16,3 +16,31 @@ Use `@/openspec/AGENTS.md` to learn:
 Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
+
+# Agents Configuration
+
+## Dev Agent
+
+**Primary References:**
+- `@/agents/ARCHITECTURE.md` - Technology stack, plugin architecture, design decisions
+- `@/agents/DEV.md` - Development guidelines
+- `@/openspec/AGENTS.md` - Only for spec-driven development (proposals, changes, archiving)
+
+## Test Agent
+
+**Primary References:**
+- `@/agents/TESTING.md` - Complete testing guide, patterns, and best practices
+- `@/openspec/AGENTS.md` - Only for spec-driven test development
+
+## Document Agent
+
+**Primary References:**
+- `@/agents/ARCHITECTURE.md` - System architecture and design decisions
+- `@/agents/TESTING.md` - Testing documentation standards
+- `@/openspec/AGENTS.md` - Only for spec documentation
+
+**Documentation Standards:**
+- Update `README.md` for major feature changes
+- Maintain OpenSpec specs as source of truth for requirements
+- Document API changes in GraphQL schema
+- Keep deployment guides in their relevate spec or change folder

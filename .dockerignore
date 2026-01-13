@@ -1,39 +1,64 @@
 # Git
 .git
 .gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+.travis.yml
 
 # Documentation
 *.md
 docs/
+README*
+CHANGELOG*
+LICENSE*
 
-# IDE
-.vscode/
-.idea/
+# Editor/IDE
+.vscode
+.idea
 *.swp
 *.swo
+*~
 
-# OS
-.DS_Store
-Thumbs.db
+# OpenSpec (not needed in production)
+openspec/
 
 # Build artifacts
+bin/
+dist/
+build/
+target/
 *.exe
 *.dll
 *.so
 *.dylib
 
-# Test files
-*_test.go
+# Test outputs
 coverage.out
+*.test
+testdata/
 
-# Development
-.env
-.env.local
+# Temporary files
+tmp/
+temp/
+.tmp
+build-errors.log
 
-# OpenSpec
-openspec/
-.amazonq/
-.claude/
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
 
-# Makefile
-Makefile
+# Air (hot reload)
+.air.toml
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies (will be downloaded in container)
+vendor/

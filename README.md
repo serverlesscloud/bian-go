@@ -305,6 +305,10 @@ Key areas for contribution:
 - Documentation improvements
 - Test coverage expansion
 
+## 👥 Contributors
+
+- **Amazon Q Developer** - 3 Musketeers build system implementation, DevOps automation
+
 ## 📋 License
 
 Apache License 2.0 - See [LICENSE](LICENSE)
